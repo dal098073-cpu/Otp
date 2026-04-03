@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live OTP Dashboard</title>
+    <style>
+        /* Dark mode design */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 20px; 
+            background-color: #121212; 
+            color: #ffffff; 
+            margin: 0; 
+        }
+        h2 { 
+            color: #00e676; 
+            text-align: center; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 15px; 
+            margin-top: 10px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .otp-card { 
+            background: #1e1e1e; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            border-radius: 12px; 
+            border-left: 5px solid #00e676; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+        }
+        .sender { 
+            color: #aaaaaa; 
+            font-size: 14px; 
+            margin-bottom: 8px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .message { 
+            margin: 0; 
+            font-size: 36px; 
+            font-weight: bold; 
+            color: #00e676; 
+            letter-spacing: 4px;
+            text-align: center;
+        }
+        .full-text {
+            color: #555;
+            font-size: 10px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .empty-state {
+            text-align: center; 
+            color: #666; 
+            margin-top: 50px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Live OTPs 🔴</h2>
+        <div id="otp-list">
+            <div class="empty-state">Waiting for MSNJET messages...</div>
+        </div>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+      // Your Firebase Config
+      const firebaseConfig = {
+        apiKey: "AIzaSyC5X1nud0nsFFzAOr8SpEjx9Ypb7-9B5io",
+        authDomain: "otps-58bc3.firebaseapp.com",
+        databaseURL: "https://otps-58bc3-default-rtdb.firebaseio.com",
+        projectId: "otps-58bc3",
+        storageBucket: "otps-58bc3.firebasestorage.app",
+        messagingSenderId: "605019598206",
+        appId: "1:605019598206:web:55fcef85fcd7567c42172f"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      const otpsRef = ref(db, 'otps');
+      
+      onValue(otpsRef, (snapshot) => {
+          const listElement = document.getElementById("otp-list");
+          const data = snapshot.val();
+          
+          if (data) {
+              listElement.innerHTML = ""; 
+              const messages = Object.values(data).reverse(); 
+              let matchCount = 0;
+              
+              messages.forEach((msg) => {
+                  const senderText = msg.sender ? msg.sender : "Unknown Sender";
+                  const fullMessage = msg.message ? msg.message : "";
+                  const senderUpper = senderText.toUpperCase();
+
+                  // ONLY process this message if it comes from MSNJET or MANJET
+                  if (senderUpper.includes("MSNJET") || senderUpper.includes("MANJET")) {
+                      matchCount++; // Keep track of how many we found
+                      
+                      const otpRegex = /\b\d{4,8}\b/;
+                      const match = fullMessage.match(otpRegex);
+                      const displayOTP = match ? match[0] : "No OTP Found";
+
+                      listElement.innerHTML += `
+                          <div class="otp-card">
+                              <div class="sender">From: ${senderText}</div>
+                              <p class="message">${displayOTP}</p>
+                              <div class="full-text">${fullMessage}</div>
+                          </div>
+                      `;
+                  }
+              });
+
+              // If we looped through everything and found no MSNJET messages
+              if (matchCount === 0) {
+                  listElement.innerHTML = `<div class="empty-state">Waiting for MSNJET messages...</div>`;
+              }
+
+          } else {
+              listElement.innerHTML = `<div class="empty-state">Waiting for MSNJET messages...</div>`;
+          }
+      });
+    </script>
+</body>
+</html>
